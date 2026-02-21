@@ -17,7 +17,7 @@ export default function DashboardScreen() {
   const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState<'all' | 'daily' | 'monthly' | 'yearly' | 'custom'>('monthly');
+  const [timeframe, setTimeframe] = useState<'all' | 'daily' | 'monthly' | 'yearly' | 'custom'>('daily');
   const [customStartDate, setCustomStartDate] = useState(new Date(new Date().setDate(1))); // Default to 1st of month
   const [customEndDate, setCustomEndDate] = useState(new Date());
   const [showPickerFor, setShowPickerFor] = useState<'start' | 'end' | null>(null);

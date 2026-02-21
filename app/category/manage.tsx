@@ -25,7 +25,14 @@ export default function CategoryManageScreen() {
     }, [session]);
 
     const handleAdd = async () => {
-        if (!name) return;
+        if (!name.trim()) return;
+
+        const isDuplicate = categories.some(cat => cat.name.toLowerCase() === name.trim().toLowerCase() && cat.type === type);
+        if (isDuplicate) {
+            Alert.alert('Error', `A category named "${name.trim()}" already exists for ${type}s.`);
+            return;
+        }
+
         setLoading(true);
         const { error } = await supabase.from('categories').insert({
             user_id: session?.user?.id,
@@ -54,9 +61,16 @@ export default function CategoryManageScreen() {
         setEditName(cat.name);
     };
 
-    const handleUpdate = async (id: string) => {
+    const handleUpdate = async (cat: any) => {
         if (!editName.trim()) { setEditingId(null); return; }
-        const { error } = await supabase.from('categories').update({ name: editName }).eq('id', id);
+
+        const isDuplicate = categories.some(c => c.name.toLowerCase() === editName.trim().toLowerCase() && c.type === cat.type && c.id !== cat.id);
+        if (isDuplicate) {
+            Alert.alert('Error', `A ${cat.type} category named "${editName.trim()}" already exists.`);
+            return;
+        }
+
+        const { error } = await supabase.from('categories').update({ name: editName.trim() }).eq('id', cat.id);
         if (!error) {
             fetchCategories();
         }
@@ -111,7 +125,7 @@ export default function CategoryManageScreen() {
                                 autoFocus
                             />
                             <View className="flex-row mt-2">
-                                <TouchableOpacity onPress={() => handleUpdate(cat.id)} className="mr-4">
+                                <TouchableOpacity onPress={() => handleUpdate(cat)} className="mr-4">
                                     <Text className="text-blue-400 font-bold">Save</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setEditingId(null)}>
