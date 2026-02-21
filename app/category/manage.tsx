@@ -10,6 +10,8 @@ export default function CategoryManageScreen() {
     const [name, setName] = useState('');
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [loading, setLoading] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
 
     const fetchCategories = async () => {
         if (session?.user?.id) {
@@ -45,6 +47,20 @@ export default function CategoryManageScreen() {
         if (!error) {
             fetchCategories();
         }
+    };
+
+    const handleEdit = (cat: any) => {
+        setEditingId(cat.id);
+        setEditName(cat.name);
+    };
+
+    const handleUpdate = async (id: string) => {
+        if (!editName.trim()) { setEditingId(null); return; }
+        const { error } = await supabase.from('categories').update({ name: editName }).eq('id', id);
+        if (!error) {
+            fetchCategories();
+        }
+        setEditingId(null);
     };
 
     return (
@@ -86,13 +102,39 @@ export default function CategoryManageScreen() {
             <Text className="text-xl font-bold text-white mb-4">Existing Categories</Text>
             {categories.map(cat => (
                 <View key={cat.id} className="flex-row justify-between items-center bg-gray-800 p-4 rounded-xl mb-2 border border-gray-700">
-                    <View>
-                        <Text className="text-white font-semibold text-lg">{cat.name}</Text>
-                        <Text className={cat.type === 'income' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>{cat.type.toUpperCase()}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleDelete(cat.id)}>
-                        <Text className="text-red-500 font-bold">Delete</Text>
-                    </TouchableOpacity>
+                    {editingId === cat.id ? (
+                        <View className="flex-1 mr-4">
+                            <TextInput
+                                className="w-full bg-gray-900 text-white rounded-lg px-3 py-2 border border-blue-500"
+                                value={editName}
+                                onChangeText={setEditName}
+                                autoFocus
+                            />
+                            <View className="flex-row mt-2">
+                                <TouchableOpacity onPress={() => handleUpdate(cat.id)} className="mr-4">
+                                    <Text className="text-blue-400 font-bold">Save</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setEditingId(null)}>
+                                    <Text className="text-gray-400 font-bold">Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : (
+                        <>
+                            <View>
+                                <Text className="text-white font-semibold text-lg">{cat.name}</Text>
+                                <Text className={cat.type === 'income' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>{cat.type.toUpperCase()}</Text>
+                            </View>
+                            <View className="flex-row">
+                                <TouchableOpacity onPress={() => handleEdit(cat)} className="mr-4">
+                                    <Text className="text-blue-400 font-bold">Edit</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleDelete(cat.id)}>
+                                    <Text className="text-red-500 font-bold">Delete</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    )}
                 </View>
             ))}
         </ScrollView>

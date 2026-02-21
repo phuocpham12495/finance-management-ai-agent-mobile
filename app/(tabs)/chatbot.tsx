@@ -42,18 +42,28 @@ export default function ChatbotScreen() {
 
             const catsStr = categories.map(c => `ID: ${c.id}, Name: ${c.name}, Type: ${c.type}`).join('\n');
 
+            const today = new Date().toISOString().split('T')[0];
             const prompt = `
-You are a financial AI assistant. The user will tell you about a transaction.
-You need to extract:
-1. amount (number, positive)
-2. description (string)
-3. type ('income' or 'expense')
-4. category_id (string, MUST match one of the IDs below based on the best fit for the description, or null if no fit)
+You are a financial AI assistant. Today's date is ${today}. The user will provide a message.
+Determine if the user is logging a new transaction (intent: "insert") or asking for a financial summary/balance (intent: "query").
 
+If intent is "insert", extract:
+- amount (number, positive)
+- description (string)
+- type ('income' or 'expense')
+- category_id (string, MUST match one of the IDs below based on the best fit for the description, or null if no fit)
 Available Categories:
 ${catsStr}
 
-Respond strictly with ONLY a valid JSON object containing amount, description, type, category_id, and NOTHING ELSE (no markdown code blocks, just raw JSON). Example: {"amount":15,"description":"lunch","type":"expense","category_id":"123"}
+If intent is "query", extract:
+- startDate (string, YYYY-MM-DD format, the start of the requested period)
+- endDate (string, YYYY-MM-DD format, the end of the requested period)
+If the user asks for "today", both startDate and endDate should be ${today}. If they ask for "last month", calculate the first and last day of last month.
+
+Respond strictly with ONLY a valid JSON object and NOTHING ELSE (no markdown).
+Format for insert: {"intent": "insert", "amount": 15, "description": "lunch", "type": "expense", "category_id": "123"}
+Format for query: {"intent": "query", "startDate": "2026-02-01", "endDate": "2026-02-28"}
+
 User input: "${userMsg}"
 `;
             const result = await model.generateContent(prompt);
@@ -74,24 +84,56 @@ User input: "${userMsg}"
                 }
             }
 
-            const { amount, description, type, category_id } = parsed;
+            const { intent } = parsed;
 
-            if (!amount || !description || !type) {
-                throw new Error("AI could not extract enough transaction information.");
+            if (intent === 'query') {
+                const { startDate, endDate } = parsed;
+                if (!startDate || !endDate) {
+                    throw new Error("Could not determine the date range for your query.");
+                }
+
+                const { data: txData, error: txError } = await supabase
+                    .from('transactions')
+                    .select('amount, type')
+                    .eq('user_id', session?.user?.id)
+                    .gte('transaction_date', startDate)
+                    .lte('transaction_date', endDate);
+
+                if (txError) throw txError;
+
+                let inc = 0, exp = 0;
+                txData?.forEach(t => {
+                    if (t.type === 'income') inc += Number(t.amount);
+                    else if (t.type === 'expense') exp += Number(t.amount);
+                });
+                const bal = inc - exp;
+
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    text: `For the period from ${startDate} to ${endDate}:\nTotal Income: $${inc.toFixed(2)}\nTotal Expense: $${exp.toFixed(2)}\nNet Balance: $${bal.toFixed(2)}`
+                }]);
+            } else if (intent === 'insert' || parsed.amount) {
+                const { amount, description, type, category_id } = parsed;
+
+                if (!amount || !description || !type) {
+                    throw new Error("AI could not extract enough transaction information.");
+                }
+
+                // Insert into Supabase
+                const { error } = await supabase.from('transactions').insert({
+                    user_id: session?.user?.id,
+                    amount: Number(amount),
+                    description,
+                    type,
+                    category_id: category_id || null,
+                });
+
+                if (error) throw error;
+
+                setMessages(prev => [...prev, { role: 'assistant', text: `Successfully logged ${type} of $${amount} for "${description}".` }]);
+            } else {
+                throw new Error("Could not understand the intent of your message.");
             }
-
-            // Insert into Supabase
-            const { error } = await supabase.from('transactions').insert({
-                user_id: session?.user?.id,
-                amount: Number(amount),
-                description,
-                type,
-                category_id: category_id || null,
-            });
-
-            if (error) throw error;
-
-            setMessages(prev => [...prev, { role: 'assistant', text: `Successfully logged ${type} of $${amount} for "${description}".` }]);
 
         } catch (e: any) {
             setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${e.message}` }]);

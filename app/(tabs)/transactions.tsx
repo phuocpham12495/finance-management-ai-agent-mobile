@@ -87,9 +87,14 @@ export default function TransactionsScreen() {
                                 <Text className={`font-bold text-lg ${t.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
                                     {t.type === 'income' ? '+' : '-'}${Number(t.amount).toFixed(2)}
                                 </Text>
-                                <TouchableOpacity onPress={() => handleDelete(t.id)} className="mt-2 pl-4 py-1">
-                                    <Text className="text-red-500 font-medium">Delete</Text>
-                                </TouchableOpacity>
+                                <View className="flex-row mt-2">
+                                    <TouchableOpacity onPress={() => router.push(`/transaction/${t.id}` as any)} className="pl-4 py-1">
+                                        <Text className="text-blue-400 font-medium">Edit</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handleDelete(t.id)} className="pl-4 py-1">
+                                        <Text className="text-red-500 font-medium">Delete</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
                     ))

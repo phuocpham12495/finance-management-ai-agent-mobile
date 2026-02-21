@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/src/services/supabase';
 import { useAuth } from '@/src/store/AuthContext';
 
-export default function AddTransactionScreen() {
+export default function AddOrEditTransactionScreen() {
     const router = useRouter();
+    const { id } = useLocalSearchParams<{ id: string }>();
     const { session } = useAuth();
+    const isEdit = id !== 'add' && id !== undefined;
 
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -14,16 +16,36 @@ export default function AddTransactionScreen() {
     const [categories, setCategories] = useState<any[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(isEdit);
 
     useEffect(() => {
         if (session?.user?.id) {
+            // Fetch categories
             supabase
                 .from('categories')
                 .select('*')
                 .eq('user_id', session.user.id)
                 .then(({ data }) => setCategories(data || []));
+
+            // Fetch transaction details if editing
+            if (isEdit) {
+                supabase
+                    .from('transactions')
+                    .select('*')
+                    .eq('id', id)
+                    .single()
+                    .then(({ data, error }) => {
+                        if (data) {
+                            setAmount(data.amount?.toString() || '');
+                            setDescription(data.description || '');
+                            setType(data.type);
+                            setSelectedCategory(data.category_id);
+                        }
+                        setFetching(false);
+                    });
+            }
         }
-    }, [session]);
+    }, [session, id, isEdit]);
 
     const handleSave = async () => {
         if (!amount || isNaN(Number(amount))) {
@@ -31,13 +53,26 @@ export default function AddTransactionScreen() {
             return;
         }
         setLoading(true);
-        const { error } = await supabase.from('transactions').insert({
-            user_id: session?.user?.id,
-            amount: Number(amount),
-            description,
-            type,
-            category_id: selectedCategory,
-        });
+        let error;
+
+        if (isEdit) {
+            const { error: updateError } = await supabase.from('transactions').update({
+                amount: Number(amount),
+                description,
+                type,
+                category_id: selectedCategory,
+            }).eq('id', id);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabase.from('transactions').insert({
+                user_id: session?.user?.id,
+                amount: Number(amount),
+                description,
+                type,
+                category_id: selectedCategory,
+            });
+            error = insertError;
+        }
 
         if (error) {
             Alert.alert('Error', error.message);
@@ -49,9 +84,17 @@ export default function AddTransactionScreen() {
 
     const filteredCategories = categories.filter(c => c.type === type);
 
+    if (fetching) {
+        return (
+            <View className="flex-1 bg-gray-900 items-center justify-center">
+                <ActivityIndicator size="large" color="#3b82f6" />
+            </View>
+        );
+    }
+
     return (
         <ScrollView className="flex-1 bg-gray-900 p-4">
-            <Text className="text-2xl font-bold text-white mb-6 mt-4">Add Transaction</Text>
+            <Text className="text-2xl font-bold text-white mb-6 mt-4">{isEdit ? 'Edit Transaction' : 'Add Transaction'}</Text>
 
             <View className="flex-row items-center mb-6">
                 <Text className="text-white text-lg mr-4">Income</Text>
@@ -95,7 +138,7 @@ export default function AddTransactionScreen() {
                         onPress={() => router.push('/category/manage')}
                         className="mr-3 px-4 py-2 rounded-full border border-dashed border-gray-400 bg-transparent"
                     >
-                        <Text className="text-gray-400">+ New Category</Text>
+                        <Text className="text-gray-400">Manage Category</Text>
                     </TouchableOpacity>
                 </ScrollView>
 
@@ -104,7 +147,7 @@ export default function AddTransactionScreen() {
                     onPress={handleSave}
                     disabled={loading}
                 >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold text-lg">Save Transaction</Text>}
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold text-lg">{isEdit ? 'Update Transaction' : 'Save Transaction'}</Text>}
                 </TouchableOpacity>
             </View>
         </ScrollView>

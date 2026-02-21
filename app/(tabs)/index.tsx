@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '@/src/store/AuthContext';
 import { supabase } from '@/src/services/supabase';
 import { useRouter } from 'expo-router';
@@ -16,7 +17,10 @@ export default function DashboardScreen() {
   const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState<'all' | 'daily' | 'monthly' | 'yearly'>('monthly');
+  const [timeframe, setTimeframe] = useState<'all' | 'daily' | 'monthly' | 'yearly' | 'custom'>('monthly');
+  const [customStartDate, setCustomStartDate] = useState(new Date(new Date().setDate(1))); // Default to 1st of month
+  const [customEndDate, setCustomEndDate] = useState(new Date());
+  const [showPickerFor, setShowPickerFor] = useState<'start' | 'end' | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -36,17 +40,24 @@ export default function DashboardScreen() {
         const now = new Date();
         let startDate = new Date();
 
-        if (timeframe === 'daily') {
-          startDate.setHours(0, 0, 0, 0);
-        } else if (timeframe === 'monthly') {
-          startDate.setDate(1);
-          startDate.setHours(0, 0, 0, 0);
-        } else if (timeframe === 'yearly') {
-          startDate.setMonth(0, 1);
-          startDate.setHours(0, 0, 0, 0);
+        if (timeframe === 'custom') {
+          const start = new Date(customStartDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+          query = query.gte('transaction_date', start.toISOString()).lte('transaction_date', end.toISOString());
+        } else {
+          if (timeframe === 'daily') {
+            startDate.setHours(0, 0, 0, 0);
+          } else if (timeframe === 'monthly') {
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+          } else if (timeframe === 'yearly') {
+            startDate.setMonth(0, 1);
+            startDate.setHours(0, 0, 0, 0);
+          }
+          query = query.gte('transaction_date', startDate.toISOString());
         }
-
-        query = query.gte('transaction_date', startDate.toISOString());
       }
 
       const { data: txData, error: txError } = await query;
@@ -69,7 +80,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchData();
-  }, [session, timeframe]);
+  }, [session, timeframe, customStartDate, customEndDate]);
 
   const categoryExpenses: Record<string, number> = {};
   transactions.forEach(t => {
@@ -106,16 +117,49 @@ export default function DashboardScreen() {
       </View>
 
       {/* Timeframe Filter */}
-      <View className="flex-row mb-6 mt-4">
-        {['all', 'daily', 'monthly', 'yearly'].map(tf => (
-          <TouchableOpacity
-            key={tf}
-            onPress={() => setTimeframe(tf as any)}
-            className={`px-4 py-2 mr-2 rounded-full border ${timeframe === tf ? 'bg-blue-600 border-blue-600' : 'bg-gray-800 border-gray-700'}`}
-          >
-            <Text className="text-white capitalize font-medium">{tf}</Text>
-          </TouchableOpacity>
-        ))}
+      <View className="mb-6 mt-4">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-2">
+          {['all', 'daily', 'monthly', 'yearly', 'custom'].map(tf => (
+            <TouchableOpacity
+              key={tf}
+              onPress={() => setTimeframe(tf as any)}
+              className={`px-4 py-2 mr-2 rounded-full border ${timeframe === tf ? 'bg-blue-600 border-blue-600' : 'bg-gray-800 border-gray-700'}`}
+            >
+              <Text className="text-white capitalize font-medium">{tf}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {timeframe === 'custom' && (
+          <View className="flex-row justify-between mt-2">
+            <TouchableOpacity onPress={() => setShowPickerFor('start')} className="flex-1 bg-gray-800 p-3 rounded-lg border border-gray-700 mr-2">
+              <Text className="text-gray-400 text-xs mb-1">Start Date</Text>
+              <Text className="text-white font-medium">{customStartDate.toLocaleDateString()}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowPickerFor('end')} className="flex-1 bg-gray-800 p-3 rounded-lg border border-gray-700 ml-2">
+              <Text className="text-gray-400 text-xs mb-1">End Date</Text>
+              <Text className="text-white font-medium">{customEndDate.toLocaleDateString()}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {showPickerFor && (
+          <DateTimePicker
+            value={showPickerFor === 'start' ? customStartDate : customEndDate}
+            mode="date"
+            display="default"
+            maximumDate={showPickerFor === 'start' ? customEndDate : new Date()}
+            minimumDate={showPickerFor === 'end' ? customStartDate : undefined}
+            onChange={(event, selectedDate) => {
+              const currentPicker = showPickerFor;
+              setShowPickerFor(Platform.OS === 'ios' ? currentPicker : null);
+              if (selectedDate) {
+                if (currentPicker === 'start') setCustomStartDate(selectedDate);
+                else setCustomEndDate(selectedDate);
+              }
+            }}
+          />
+        )}
       </View>
 
       {/* Summary Cards */}
