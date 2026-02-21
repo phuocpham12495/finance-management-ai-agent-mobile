@@ -44,8 +44,8 @@ export default function ChatbotScreen() {
 
             const today = new Date().toISOString().split('T')[0];
             const prompt = `
-You are a financial AI assistant. Today's date is ${today}. The user will provide a message.
-Determine if the user is logging a new transaction (intent: "insert") or asking for a financial summary/balance (intent: "query").
+You are an upbeat, supportive Personal Finance Companion. Today's date is ${today}.
+Listen to the user's message and determine their intent: logging a transaction ("insert") or asking for a financial summary ("query").
 
 If intent is "insert", extract:
 - amount (number, positive)
@@ -60,9 +60,11 @@ If intent is "query", extract:
 - endDate (string, YYYY-MM-DD format, the end of the requested period)
 If the user asks for "today", both startDate and endDate should be ${today}. If they ask for "last month", calculate the first and last day of last month.
 
+CRITICAL: For BOTH intents, you MUST generate a conversational, friendly 'reply' string. This reply should acknowledge what they did/asked playfully and MUST include fun, context-aware emojis (e.g., 🍔, 🎉, 💸, 📉, ☕️). Do not just state the boring facts. Provide a conversational human-like response.
+
 Respond strictly with ONLY a valid JSON object and NOTHING ELSE (no markdown).
-Format for insert: {"intent": "insert", "amount": 15, "description": "lunch", "type": "expense", "category_id": "123"}
-Format for query: {"intent": "query", "startDate": "2026-02-01", "endDate": "2026-02-28"}
+Format for insert: {"intent": "insert", "amount": 15, "description": "lunch", "type": "expense", "category_id": "123", "reply": "Ouch! Another $15 on lunch? 🍔 Well, a fed human is a productive human! Logged!"}
+Format for query: {"intent": "query", "startDate": "2026-02-01", "endDate": "2026-02-28", "reply": "Let's crack open the vault... 🏦 Here is your summary for Feb!"}
 
 User input: "${userMsg}"
 `;
@@ -110,10 +112,10 @@ User input: "${userMsg}"
 
                 setMessages(prev => [...prev, {
                     role: 'assistant',
-                    text: `For the period from ${startDate} to ${endDate}:\nTotal Income: $${inc.toFixed(2)}\nTotal Expense: $${exp.toFixed(2)}\nNet Balance: $${bal.toFixed(2)}`
+                    text: `${parsed.reply || "Here's your summary!"}\n\n📊 Period: ${startDate} to ${endDate}\n💚 Total Income: $${inc.toFixed(2)}\n🔴 Total Expense: $${exp.toFixed(2)}\n💼 Net Balance: $${bal.toFixed(2)}`
                 }]);
             } else if (intent === 'insert' || parsed.amount) {
-                const { amount, description, type, category_id } = parsed;
+                const { amount, description, type, category_id, reply } = parsed;
 
                 if (!amount || !description || !type) {
                     throw new Error("AI could not extract enough transaction information.");
@@ -130,7 +132,7 @@ User input: "${userMsg}"
 
                 if (error) throw error;
 
-                setMessages(prev => [...prev, { role: 'assistant', text: `Successfully logged ${type} of $${amount} for "${description}".` }]);
+                setMessages(prev => [...prev, { role: 'assistant', text: reply || `Got it! Successfully logged ${type} of $${amount} for "${description}". ✅` }]);
             } else {
                 throw new Error("Could not understand the intent of your message.");
             }
