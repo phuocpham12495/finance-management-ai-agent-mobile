@@ -1,7 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 async function debugModels() {
-    const apiKey = "AIzaSyDZz2vH2NEHwNnfiqkZGYD3YeSzmnpME6Y";
+    const apiKey = "no leak here";
     if (!apiKey) {
         console.error("API Key missing");
         return;
