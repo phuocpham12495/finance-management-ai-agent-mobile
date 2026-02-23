@@ -9,7 +9,8 @@
         "edit": "Sửa",
         "add": "Thêm",
         "confirm_delete": "Bạn có chắc chắn muốn xóa giao dịch này không?",
-        "delete_transaction": "Xóa giao dịch"
+        "delete_transaction": "Xóa giao dịch",
+        "uncategorized": "Chưa phân loại"
     },
     "auth": {
         "welcome": "Chào mừng trở lại",
@@ -72,6 +73,26 @@
         "error_amount": "Vui lòng nhập số tiền hợp lệ",
         "error_category": "Vui lòng chọn danh mục",
         "remaining": "Còn lại"
+    },
+    "transactions_screen": {
+        "add_title": "Thêm giao dịch",
+        "edit_title": "Sửa giao dịch",
+        "amount_placeholder": "Số tiền (VD: 50.00)",
+        "description_placeholder": "Mô tả",
+        "select_category": "Chọn danh mục",
+        "manage_category": "Quản lý danh mục",
+        "save_transaction": "Lưu giao dịch",
+        "update_transaction": "Cập nhật giao dịch",
+        "error_amount": "Vui lòng nhập số tiền hợp lệ"
+    },
+    "categories_screen": {
+        "manage_title": "Quản lý danh mục",
+        "add_new": "Thêm danh mục mới",
+        "name_placeholder": "Tên danh mục",
+        "add_button": "Thêm danh mục",
+        "existing_title": "Danh mục hiện có",
+        "error_exists": "Danh mục tên \"{{name}}\" đã tồn tại cho {{type}}.",
+        "error_exists_simple": "Danh mục {{type}} tên \"{{name}}\" đã tồn tại."
     },
     "chatbot": {
         "title": "Trợ lý AI",

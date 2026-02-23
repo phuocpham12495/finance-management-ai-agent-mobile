@@ -65,8 +65,7 @@ export default function TransactionsScreen() {
             className="flex-1 bg-gray-900 p-4"
             refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchTransactions} tintColor="#fff" />}
         >
-            <View className="flex-row justify-between items-center mb-6 mt-4">
-                <Text className="text-2xl font-bold text-white">{t('dashboard.transactions')}</Text>
+            <View className="flex-row justify-end items-center mb-6 mt-2">
                 <TouchableOpacity
                     onPress={() => router.push('/transaction/add')}
                     className="bg-blue-600 px-4 py-2 rounded-xl"
@@ -82,8 +81,8 @@ export default function TransactionsScreen() {
                     transactions.map(tx => (
                         <View key={tx.id} className="bg-gray-800 rounded-xl p-4 flex-row justify-between items-center mb-3">
                             <View className="flex-1 mr-4">
-                                <Text className="text-white font-semibold text-lg">{tx.description || (tx.type === 'income' ? 'Income' : 'Expense')}</Text>
-                                <Text className="text-gray-400">{tx.categories?.name || 'Uncategorized'} • {new Date(tx.transaction_date).toLocaleDateString()}</Text>
+                                <Text className="text-white font-semibold text-lg">{tx.description || (tx.type === 'income' ? t('dashboard.income') : t('dashboard.expense'))}</Text>
+                                <Text className="text-gray-400">{tx.categories?.name || t('common.uncategorized')} • {new Date(tx.transaction_date).toLocaleDateString()}</Text>
                             </View>
                             <View className="items-end">
                                 <Text className={`font-bold text-lg ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>

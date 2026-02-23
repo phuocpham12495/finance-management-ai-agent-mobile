@@ -9,7 +9,8 @@
         "edit": "Edit",
         "add": "Add",
         "confirm_delete": "Are you sure you want to delete this transaction?",
-        "delete_transaction": "Delete Transaction"
+        "delete_transaction": "Delete Transaction",
+        "uncategorized": "Uncategorized"
     },
     "auth": {
         "welcome": "Welcome back",
@@ -69,8 +70,28 @@
         "success_update": "Budget updated successfully",
         "error_amount": "Please enter a valid amount",
         "error_category": "Please select a category",
-        "over_budget": "Budget Exceeded! ⚠️",
-        "remaining": "Remaining"
+        "remaining": "Remaining",
+        "over_budget": "Budget Exceeded! ⚠️"
+    },
+    "transactions_screen": {
+        "add_title": "Add Transaction",
+        "edit_title": "Edit Transaction",
+        "amount_placeholder": "Amount (e.g. 50.00)",
+        "description_placeholder": "Description",
+        "select_category": "Select Category",
+        "manage_category": "Manage Category",
+        "save_transaction": "Save Transaction",
+        "update_transaction": "Update Transaction",
+        "error_amount": "Please enter a valid amount"
+    },
+    "categories_screen": {
+        "manage_title": "Manage Categories",
+        "add_new": "Add New Category",
+        "name_placeholder": "Category Name",
+        "add_button": "Add Category",
+        "existing_title": "Existing Categories",
+        "error_exists": "A category named \"{{name}}\" already exists for {{type}}s.",
+        "error_exists_simple": "A {{type}} category named \"{{name}}\" already exists."
     },
     "chatbot": {
         "title": "AI Assistant",

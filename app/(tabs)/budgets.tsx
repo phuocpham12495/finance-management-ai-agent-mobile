@@ -156,10 +156,9 @@ export default function BudgetsScreen() {
             className="flex-1 bg-gray-900 p-4"
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
         >
-            <Text className="text-2xl font-bold text-white mb-6 mt-4">{t('budgets.title')}</Text>
 
             {/* Budget Form */}
-            <View className="bg-gray-800 p-4 rounded-xl mb-8 border border-gray-700">
+            <View className="bg-gray-800 p-4 rounded-xl mb-8 border border-gray-700 mt-2">
                 <Text className="text-white font-semibold mb-4">{isEditing ? t('budgets.edit_budget') : t('budgets.add_budget')}</Text>
 
                 <TextInput

@@ -68,9 +68,9 @@ export default function DashboardScreen() {
       setTransactions(txData || []);
 
       let inc = 0, exp = 0;
-      txData?.forEach(t => {
-        if (t.type === 'income') inc += Number(t.amount);
-        else if (t.type === 'expense') exp += Number(t.amount);
+      txData?.forEach(tx => {
+        if (tx.type === 'income') inc += Number(tx.amount);
+        else if (tx.type === 'expense') exp += Number(tx.amount);
       });
       setSummary({ income: inc, expense: exp, balance: inc - exp });
     } catch (e) {
@@ -85,18 +85,18 @@ export default function DashboardScreen() {
   }, [session, timeframe, customStartDate, customEndDate]);
 
   const categoryExpenses: Record<string, number> = {};
-  transactions.forEach(t => {
-    if (t.type === 'expense') {
-      const cat = t.categories?.name || 'Uncategorized';
-      categoryExpenses[cat] = (categoryExpenses[cat] || 0) + Number(t.amount);
+  transactions.forEach(tx => {
+    if (tx.type === 'expense') {
+      const cat = tx.categories?.name || t('common.uncategorized');
+      categoryExpenses[cat] = (categoryExpenses[cat] || 0) + Number(tx.amount);
     }
   });
 
   const categoryIncomes: Record<string, number> = {};
-  transactions.forEach(t => {
-    if (t.type === 'income') {
-      const cat = t.categories?.name || 'Uncategorized';
-      categoryIncomes[cat] = (categoryIncomes[cat] || 0) + Number(t.amount);
+  transactions.forEach(tx => {
+    if (tx.type === 'income') {
+      const cat = tx.categories?.name || t('common.uncategorized');
+      categoryIncomes[cat] = (categoryIncomes[cat] || 0) + Number(tx.amount);
     }
   });
 
@@ -133,7 +133,7 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} tintColor="#fff" />}
     >
       <View className="flex-row justify-between items-center mb-6 mt-2">
-        <Text className="text-2xl font-bold text-white">{t('dashboard.hi') || 'Hi'} {userName} 👋</Text>
+        <Text className="text-2xl font-bold text-white">{t('dashboard.hi')} {userName} 👋</Text>
       </View>
 
       {/* Timeframe Filter */}
@@ -263,14 +263,14 @@ export default function DashboardScreen() {
         {transactions.length === 0 ? (
           <Text className="text-gray-400 italic">{t('dashboard.no_transactions')}</Text>
         ) : (
-          transactions.slice(0, 5).map(t => (
-            <View key={t.id} className="bg-gray-800 rounded-xl p-4 flex-row justify-between items-center mb-3">
+          transactions.slice(0, 5).map(tx => (
+            <View key={tx.id} className="bg-gray-800 rounded-xl p-4 flex-row justify-between items-center mb-3">
               <View>
-                <Text className="text-white font-semibold text-lg">{t.description || (t.type === 'income' ? 'Income' : 'Expense')}</Text>
-                <Text className="text-gray-400">{t.categories?.name || 'Uncategorized'} • {t.transaction_date}</Text>
+                <Text className="text-white font-semibold text-lg">{tx.description || (tx.type === 'income' ? t('dashboard.income') : t('dashboard.expense'))}</Text>
+                <Text className="text-gray-400">{tx.categories?.name || t('common.uncategorized')} • {tx.transaction_date}</Text>
               </View>
-              <Text className={`font-bold text-lg ${t.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                {t.type === 'income' ? '+' : '-'}${Number(t.amount).toFixed(2)}
+              <Text className={`font-bold text-lg ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                {tx.type === 'income' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
               </Text>
             </View>
           ))

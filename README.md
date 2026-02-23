@@ -68,6 +68,9 @@ npx expo start --clear
 ```
 Use the **Expo Go** app on your physical iOS/Android device to scan the generated QR code, or press `a` or `i` to launch in a local emulator!
 
+### 6. Build Standalone APK
+For instructions on how to build a standalone `.apk` file for Android, see the **[Android Build Guide](file:///d:/AI%20Agent%20Projects/Android%20Release/finance-management-ai-agent-mobile/ANDROID_BUILD_GUIDE.md)**.
+
 ---
 
 ## 🛠️ Technology Stack

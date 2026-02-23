@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { supabase } from '@/src/services/supabase';
 import { useAuth } from '@/src/store/AuthContext';
+import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function CategoryManageScreen() {
     const { session } = useAuth();
+    const { t } = useTranslation();
 
     const [categories, setCategories] = useState<any[]>([]);
     const [name, setName] = useState('');
@@ -29,7 +32,7 @@ export default function CategoryManageScreen() {
 
         const isDuplicate = categories.some(cat => cat.name.toLowerCase() === name.trim().toLowerCase() && cat.type === type);
         if (isDuplicate) {
-            Alert.alert('Error', `A category named "${name.trim()}" already exists for ${type}s.`);
+            Alert.alert(t('common.error'), t('categories_screen.error_exists', { name: name.trim(), type: t(`common.${type}`) }));
             return;
         }
 
@@ -41,7 +44,7 @@ export default function CategoryManageScreen() {
         });
 
         if (error) {
-            Alert.alert('Error', error.message);
+            Alert.alert(t('common.error'), error.message);
         } else {
             setName('');
             fetchCategories();
@@ -66,7 +69,7 @@ export default function CategoryManageScreen() {
 
         const isDuplicate = categories.some(c => c.name.toLowerCase() === editName.trim().toLowerCase() && c.type === cat.type && c.id !== cat.id);
         if (isDuplicate) {
-            Alert.alert('Error', `A ${cat.type} category named "${editName.trim()}" already exists.`);
+            Alert.alert(t('common.error'), t('categories_screen.error_exists_simple', { name: editName.trim(), type: t(`common.${cat.type}`) }));
             return;
         }
 
@@ -79,13 +82,13 @@ export default function CategoryManageScreen() {
 
     return (
         <ScrollView className="flex-1 bg-gray-900 p-4">
-            <Text className="text-2xl font-bold text-white mb-6 mt-4">Manage Categories</Text>
+            <Stack.Screen options={{ title: t('categories_screen.manage_title') }} />
 
             <View className="bg-gray-800 p-4 rounded-xl mb-6 border border-gray-700">
-                <Text className="text-white mb-3 font-semibold text-lg">Add New Category</Text>
+                <Text className="text-white mb-3 font-semibold text-lg">{t('categories_screen.add_new')}</Text>
                 <TextInput
                     className="w-full bg-gray-900 text-white rounded-lg px-4 py-3 border border-gray-700 mb-3"
-                    placeholder="Category Name"
+                    placeholder={t('categories_screen.name_placeholder')}
                     placeholderTextColor="#9ca3af"
                     value={name}
                     onChangeText={setName}
@@ -95,13 +98,13 @@ export default function CategoryManageScreen() {
                         onPress={() => setType('expense')}
                         className={`flex-1 py-2 items-center rounded-lg border ${type === 'expense' ? 'bg-red-500/20 border-red-500' : 'border-gray-600 bg-gray-900'}`}
                     >
-                        <Text className={`${type === 'expense' ? 'text-red-400 font-bold' : 'text-gray-400'}`}>Expense</Text>
+                        <Text className={`${type === 'expense' ? 'text-red-400 font-bold' : 'text-gray-400'}`}>{t('dashboard.expense')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setType('income')}
                         className={`flex-1 py-2 items-center rounded-lg border ml-2 ${type === 'income' ? 'bg-green-500/20 border-green-500' : 'border-gray-600 bg-gray-900'}`}
                     >
-                        <Text className={`${type === 'income' ? 'text-green-400 font-bold' : 'text-gray-400'}`}>Income</Text>
+                        <Text className={`${type === 'income' ? 'text-green-400 font-bold' : 'text-gray-400'}`}>{t('dashboard.income')}</Text>
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity
@@ -109,11 +112,11 @@ export default function CategoryManageScreen() {
                     disabled={loading}
                     className="bg-blue-600 py-3 rounded-lg items-center"
                 >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Add Category</Text>}
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">{t('categories_screen.add_button')}</Text>}
                 </TouchableOpacity>
             </View>
 
-            <Text className="text-xl font-bold text-white mb-4">Existing Categories</Text>
+            <Text className="text-xl font-bold text-white mb-4">{t('categories_screen.existing_title')}</Text>
             {categories.map(cat => (
                 <View key={cat.id} className="flex-row justify-between items-center bg-gray-800 p-4 rounded-xl mb-2 border border-gray-700">
                     {editingId === cat.id ? (
@@ -126,10 +129,10 @@ export default function CategoryManageScreen() {
                             />
                             <View className="flex-row mt-2">
                                 <TouchableOpacity onPress={() => handleUpdate(cat)} className="mr-4">
-                                    <Text className="text-blue-400 font-bold">Save</Text>
+                                    <Text className="text-blue-400 font-bold">{t('common.save')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setEditingId(null)}>
-                                    <Text className="text-gray-400 font-bold">Cancel</Text>
+                                    <Text className="text-gray-400 font-bold">{t('common.cancel')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -137,14 +140,16 @@ export default function CategoryManageScreen() {
                         <>
                             <View>
                                 <Text className="text-white font-semibold text-lg">{cat.name}</Text>
-                                <Text className={cat.type === 'income' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>{cat.type.toUpperCase()}</Text>
+                                <Text className={cat.type === 'income' ? 'text-green-500 text-sm' : 'text-red-500 text-sm'}>
+                                    {(cat.type === 'income' ? t('dashboard.income') : t('dashboard.expense')).toUpperCase()}
+                                </Text>
                             </View>
                             <View className="flex-row">
                                 <TouchableOpacity onPress={() => handleEdit(cat)} className="mr-4">
-                                    <Text className="text-blue-400 font-bold">Edit</Text>
+                                    <Text className="text-blue-400 font-bold">{t('common.edit')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => handleDelete(cat.id)}>
-                                    <Text className="text-red-500 font-bold">Delete</Text>
+                                    <Text className="text-red-500 font-bold">{t('common.delete')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>

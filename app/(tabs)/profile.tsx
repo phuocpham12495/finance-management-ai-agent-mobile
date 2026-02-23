@@ -1,5 +1,6 @@
 import { supabase } from '@/src/services/supabase';
 import { useAuth } from '@/src/store/AuthContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -15,7 +16,6 @@ export default function ProfileScreen() {
     const [name, setName] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [dob, setDob] = useState('');
-    const [notifications, setNotifications] = useState(false);
     const [aiVoice, setAiVoice] = useState(false);
 
     // Date picker state
@@ -37,7 +37,6 @@ export default function ProfileScreen() {
                 }
             }
 
-            setNotifications(metadata.notifications_enabled === true);
             setAiVoice(metadata.ai_voice_enabled === true);
         }
     }, [user]);
@@ -75,7 +74,6 @@ export default function ProfileScreen() {
                     full_name: name,
                     avatar_url: avatarUrl,
                     dob: dob,
-                    notifications_enabled: notifications,
                     ai_voice_enabled: aiVoice
                 }
             });
@@ -137,7 +135,16 @@ export default function ProfileScreen() {
                             {dob || "YYYY-MM-DD"}
                         </Text>
                     </TouchableOpacity>
-                    {/* ... picker code ... */}
+
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={dateValue}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={handleDateChange}
+                            maximumDate={new Date()}
+                        />
+                    )}
                 </View>
             </View>
 
@@ -160,17 +167,7 @@ export default function ProfileScreen() {
                 </View>
             </View>
 
-            <View className="bg-gray-800 rounded-2xl p-4 border border-gray-700 mb-6 flex-row justify-between items-center">
-                <View>
-                    <Text className="text-lg font-bold text-white">{t('settings.notifications') || 'Reminder Notifications'}</Text>
-                    <Text className="text-sm text-gray-400 mt-1">{t('settings.notifications_sub') || 'Receive alerts for your budget'}</Text>
-                </View>
-                <Switch
-                    value={notifications}
-                    onValueChange={setNotifications}
-                    trackColor={{ false: '#374151', true: '#3b82f6' }}
-                />
-            </View>
+
 
             <View className="bg-gray-800 rounded-2xl p-4 border border-gray-700 mb-6 flex-row justify-between items-center">
                 <View>
