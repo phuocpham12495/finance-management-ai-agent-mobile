@@ -1,4 +1,4 @@
-const apiKey = "AIzaSyDZz2vH2NEHwNnfiqkZGYD3YeSzmnpME6Y";
+const apiKey = "no leak here";
 
 async function listNames() {
     try {
