@@ -1,8 +1,10 @@
-import { Tabs } from 'expo-router';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Text } from 'react-native';
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
 
   return (
@@ -21,28 +23,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📊</Text>,
         }}
       />
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transactions',
+          title: t('tabs.transactions'),
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>💸</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="budgets"
+        options={{
+          title: t('tabs.budgets'),
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📅</Text>,
         }}
       />
       <Tabs.Screen
         name="chatbot"
         options={{
-          title: 'AI Agent',
+          title: t('tabs.ai_agent'),
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🤖</Text>,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
         }}
       />

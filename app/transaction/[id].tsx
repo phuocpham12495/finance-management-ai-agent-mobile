@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as NotificationService from '@/src/services/NotificationService';
 import { supabase } from '@/src/services/supabase';
 import { useAuth } from '@/src/store/AuthContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AddOrEditTransactionScreen() {
     const router = useRouter();
@@ -17,6 +19,9 @@ export default function AddOrEditTransactionScreen() {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(isEdit);
+    const { t } = useTranslation();
+    const [budgets, setBudgets] = useState<any[]>([]);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -44,6 +49,18 @@ export default function AddOrEditTransactionScreen() {
                         setFetching(false);
                     });
             }
+
+            // Fetch budgets
+            supabase
+                .from('budgets')
+                .select('*, categories(name)')
+                .eq('user_id', session.user.id)
+                .then(({ data }) => setBudgets(data || []));
+
+            // Check notifications enabled
+            supabase.auth.getUser().then(({ data }) => {
+                setNotificationsEnabled(data.user?.user_metadata?.notifications_enabled === true);
+            });
         }
     }, [session, id, isEdit]);
 
@@ -77,6 +94,29 @@ export default function AddOrEditTransactionScreen() {
         if (error) {
             Alert.alert('Error', error.message);
         } else {
+            // Check budget if expense
+            if (notificationsEnabled && type === 'expense' && selectedCategory) {
+                const budget = budgets.find(b => b.category_id === selectedCategory);
+                if (budget) {
+                    const now = new Date();
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+                    const { data: txData } = await supabase
+                        .from('transactions')
+                        .select('amount')
+                        .eq('user_id', session?.user?.id)
+                        .eq('type', 'expense')
+                        .eq('category_id', selectedCategory)
+                        .gte('transaction_date', startOfMonth);
+
+                    const totalSpent = txData?.reduce((acc, tx) => acc + Number(tx.amount), 0) || 0;
+                    if (totalSpent > budget.amount) {
+                        NotificationService.sendLocalNotification(
+                            t('budgets.over_budget'),
+                            `${t('budgets.category')}: ${budget.categories?.name}. ${t('budgets.amount')}: $${budget.amount}. ${t('common.total')}: $${totalSpent.toFixed(2)}`
+                        );
+                    }
+                }
+            }
             router.back();
         }
         setLoading(false);

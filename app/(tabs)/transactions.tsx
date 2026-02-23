@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { useAuth } from '@/src/store/AuthContext';
 import { supabase } from '@/src/services/supabase';
+import { useAuth } from '@/src/store/AuthContext';
 import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TransactionsScreen() {
+    const { t } = useTranslation();
     const { session } = useAuth();
     const router = useRouter();
 
@@ -35,10 +37,10 @@ export default function TransactionsScreen() {
     };
 
     const handleDelete = async (id: string) => {
-        Alert.alert("Delete Transaction", "Are you sure you want to delete this transaction?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert(t('common.delete_transaction'), t('common.confirm_delete'), [
+            { text: t('common.cancel'), style: "cancel" },
             {
-                text: "Delete",
+                text: t('common.delete'),
                 style: "destructive",
                 onPress: async () => {
                     setLoading(true);
@@ -46,7 +48,7 @@ export default function TransactionsScreen() {
                     if (!error) {
                         fetchTransactions();
                     } else {
-                        Alert.alert("Error", error.message);
+                        Alert.alert(t('common.error'), error.message);
                         setLoading(false);
                     }
                 }
@@ -64,35 +66,35 @@ export default function TransactionsScreen() {
             refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchTransactions} tintColor="#fff" />}
         >
             <View className="flex-row justify-between items-center mb-6 mt-4">
-                <Text className="text-2xl font-bold text-white">All Transactions</Text>
+                <Text className="text-2xl font-bold text-white">{t('dashboard.transactions')}</Text>
                 <TouchableOpacity
                     onPress={() => router.push('/transaction/add')}
                     className="bg-blue-600 px-4 py-2 rounded-xl"
                 >
-                    <Text className="text-white font-medium">+ Add</Text>
+                    <Text className="text-white font-medium">+ {t('common.add')}</Text>
                 </TouchableOpacity>
             </View>
 
             <View className="mb-20">
                 {transactions.length === 0 && !loading ? (
-                    <Text className="text-gray-400 italic text-center mt-10">No transactions recorded yet.</Text>
+                    <Text className="text-gray-400 italic text-center mt-10">{t('dashboard.no_transactions')}</Text>
                 ) : (
-                    transactions.map(t => (
-                        <View key={t.id} className="bg-gray-800 rounded-xl p-4 flex-row justify-between items-center mb-3">
+                    transactions.map(tx => (
+                        <View key={tx.id} className="bg-gray-800 rounded-xl p-4 flex-row justify-between items-center mb-3">
                             <View className="flex-1 mr-4">
-                                <Text className="text-white font-semibold text-lg">{t.description || (t.type === 'income' ? 'Income' : 'Expense')}</Text>
-                                <Text className="text-gray-400">{t.categories?.name || 'Uncategorized'} • {new Date(t.transaction_date).toLocaleDateString()}</Text>
+                                <Text className="text-white font-semibold text-lg">{tx.description || (tx.type === 'income' ? 'Income' : 'Expense')}</Text>
+                                <Text className="text-gray-400">{tx.categories?.name || 'Uncategorized'} • {new Date(tx.transaction_date).toLocaleDateString()}</Text>
                             </View>
                             <View className="items-end">
-                                <Text className={`font-bold text-lg ${t.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                                    {t.type === 'income' ? '+' : '-'}${Number(t.amount).toFixed(2)}
+                                <Text className={`font-bold text-lg ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                                    {tx.type === 'income' ? '+' : '-'}${Number(tx.amount).toFixed(2)}
                                 </Text>
                                 <View className="flex-row mt-2">
-                                    <TouchableOpacity onPress={() => router.push(`/transaction/${t.id}` as any)} className="pl-4 py-1">
-                                        <Text className="text-blue-400 font-medium">Edit</Text>
+                                    <TouchableOpacity onPress={() => router.push(`/transaction/${tx.id}` as any)} className="pl-4 py-1">
+                                        <Text className="text-blue-400 font-medium">{t('common.edit')}</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => handleDelete(t.id)} className="pl-4 py-1">
-                                        <Text className="text-red-500 font-medium">Delete</Text>
+                                    <TouchableOpacity onPress={() => handleDelete(tx.id)} className="pl-4 py-1">
+                                        <Text className="text-red-500 font-medium">{t('common.delete')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>

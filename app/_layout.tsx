@@ -1,11 +1,12 @@
-import '../global.css';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Slot, Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
 import { useEffect } from 'react';
+import 'react-native-reanimated';
+import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import '@/src/i18n/i18n';
 import { AuthProvider, useAuth } from '@/src/store/AuthContext';
 
 export const unstable_settings = {

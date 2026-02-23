@@ -1,25 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { useAuth } from '@/src/store/AuthContext';
+import * as NotificationService from '@/src/services/NotificationService';
 import { supabase } from '@/src/services/supabase';
+import { useAuth } from '@/src/store/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import * as Speech from 'expo-speech';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatbotScreen() {
     const { session } = useAuth();
+    const { t, i18n } = useTranslation();
     const [messages, setMessages] = useState<{ role: 'user' | 'assistant', text: string }[]>([
-        { role: 'assistant', text: "Hello! I'm your AI financial assistant. You can tell me things like 'I spent $25 on coffee today' or ask 'What is my total balance?'" }
+        { role: 'assistant', text: t('chatbot.greeting') }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<{ id: string, name: string, type: string }[]>([]);
+    const [budgets, setBudgets] = useState<any[]>([]);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [aiVoiceEnabled, setAiVoiceEnabled] = useState(false);
+    const [spentContext, setSpentContext] = useState<Record<string, number>>({});
+
+    // Voice state
+    const [recording, setRecording] = useState<Audio.Recording | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+
+    useEffect(() => {
+        NotificationService.requestNotificationPermissions();
+    }, []);
 
     useEffect(() => {
         if (session?.user?.id) {
+            // Fetch categories
             supabase
                 .from('categories')
                 .select('id, name, type')
                 .eq('user_id', session.user.id)
                 .then(({ data }) => setCategories(data || []));
+
+            // Fetch budgets and current month spending
+            const fetchBudgetContext = async () => {
+                const { data: bData } = await supabase
+                    .from('budgets')
+                    .select('*, categories(name)')
+                    .eq('user_id', session.user.id);
+                setBudgets(bData || []);
+
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+                const { data: txData } = await supabase
+                    .from('transactions')
+                    .select('amount, category_id')
+                    .eq('user_id', session.user.id)
+                    .eq('type', 'expense')
+                    .gte('transaction_date', startOfMonth);
+
+                const spentMap: Record<string, number> = {};
+                txData?.forEach(tx => {
+                    if (tx.category_id) {
+                        spentMap[tx.category_id] = (spentMap[tx.category_id] || 0) + Number(tx.amount);
+                    }
+                });
+                setSpentContext(spentMap);
+            };
+            fetchBudgetContext();
+
+            // Check notification & voice preference
+            supabase.auth.getUser().then(({ data }) => {
+                setNotificationsEnabled(data.user?.user_metadata?.notifications_enabled === true);
+                setAiVoiceEnabled(data.user?.user_metadata?.ai_voice_enabled === true);
+            });
         }
     }, [session]);
 
@@ -41,30 +94,49 @@ export default function ChatbotScreen() {
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             const catsStr = categories.map(c => `ID: ${c.id}, Name: ${c.name}, Type: ${c.type}`).join('\n');
+            const budgetsStr = budgets.map(b => {
+                const spent = spentContext[b.category_id] || 0;
+                return `${b.categories?.name}: Limit $${b.amount}, Already Spent $${spent.toFixed(2)}`;
+            }).join('\n');
 
             const today = new Date().toISOString().split('T')[0];
             const prompt = `
 You are an upbeat, supportive Personal Finance Companion. Today's date is ${today}.
-Listen to the user's message and determine their intent: logging a transaction ("insert") or asking for a financial summary ("query").
+Listen to the user's message and determine their intent.
 
-If intent is "insert", extract:
-- amount (number, positive)
-- description (string)
-- type ('income' or 'expense')
-- category_id (string, MUST match one of the IDs below based on the best fit for the description, or null if no fit)
-Available Categories:
+INTENTS:
+1. "insert": Log a new transaction.
+   - Requires: amount, description, type ('income'|'expense').
+   - date: YYYY-MM-DD. Default to ${today}.
+   - category_id: Match from local categories or null if unsure.
+2. "query": Reporting on financial status.
+   - Requires: startDate, endDate (YYYY-MM-DD).
+   - category_name: (optional) Filter by a specific category name.
+3. "tips": User wants advice on reducing expenses or general savings.
+4. "ask_category": Use this if user wants to log something but didn't provide a category AND you can't confidently guess one.
+
+CONTEXT:
+Categories:
 ${catsStr}
 
-If intent is "query", extract:
-- startDate (string, YYYY-MM-DD format, the start of the requested period)
-- endDate (string, YYYY-MM-DD format, the end of the requested period)
-If the user asks for "today", both startDate and endDate should be ${today}. If they ask for "last month", calculate the first and last day of last month.
+User Budgets:
+${budgetsStr}
+Notifications Enabled: ${notificationsEnabled}
 
-CRITICAL: For BOTH intents, you MUST generate a conversational, friendly 'reply' string. This reply should acknowledge what they did/asked playfully and MUST include fun, context-aware emojis (e.g., 🍔, 🎉, 💸, 📉, ☕️). Do not just state the boring facts. Provide a conversational human-like response.
+RULES:
+- If "insert" is chosen, calculate the date correctly (e.g., "yesterday" = ${new Date(Date.now() - 86400000).toISOString().split('T')[0]}).
+- **BUDGET RULE**: ALWAYS check the new transaction amount against the "Already Spent" and "Limit" provided in CONTEXT.
+  - If the new amount causes "Already Spent" to exceed "Limit", or if it was already exceeded, you MUST explicitly mention this in your 'reply' (e.g., "Note: This category is now over budget! ⚠️"). This is MANDATORY regardless of notification settings.
+- If "query", provide a summary.
+- If "tips", analyze their intent and suggest ways to save based on typical spending (e.g., eating out, subscriptions).
 
-Respond strictly with ONLY a valid JSON object and NOTHING ELSE (no markdown).
-Format for insert: {"intent": "insert", "amount": 15, "description": "lunch", "type": "expense", "category_id": "123", "reply": "Ouch! Another $15 on lunch? 🍔 Well, a fed human is a productive human! Logged!"}
-Format for query: {"intent": "query", "startDate": "2026-02-01", "endDate": "2026-02-28", "reply": "Let's crack open the vault... 🏦 Here is your summary for Feb!"}
+CRITICAL: Generate a conversational, friendly 'reply' string IN: ${i18n.language === 'vi' ? 'Vietnamese' : 'English'}. Include fun, context-aware emojis.
+
+Respond strictly with ONLY a valid JSON object:
+Insert: {"intent": "insert", "amount": 10, "description": "Coffee", "type": "expense", "category_id": "...", "date": "...", "reply": "... [mention budget status here if over limit]"}
+Query: {"intent": "query", "startDate": "...", "endDate": "...", "category_name": "...", "reply": "..."}
+Tips: {"intent": "tips", "reply": "..."}
+Ask: {"intent": "ask_category", "reply": "I'd love to log that, but which category should I use? 🏷️"}
 
 User input: "${userMsg}"
 `;
@@ -89,18 +161,25 @@ User input: "${userMsg}"
             const { intent } = parsed;
 
             if (intent === 'query') {
-                const { startDate, endDate } = parsed;
+                const { startDate, endDate, category_name } = parsed;
                 if (!startDate || !endDate) {
                     throw new Error("Could not determine the date range for your query.");
                 }
 
-                const { data: txData, error: txError } = await supabase
+                let query = supabase
                     .from('transactions')
-                    .select('amount, type')
+                    .select('amount, type, description, categories(name)')
                     .eq('user_id', session?.user?.id)
                     .gte('transaction_date', startDate)
                     .lte('transaction_date', endDate);
 
+                if (category_name) {
+                    // Try to find category ID by name
+                    const cat = categories.find(c => c.name.toLowerCase() === category_name.toLowerCase());
+                    if (cat) query = query.eq('category_id', cat.id);
+                }
+
+                const { data: txData, error: txError } = await query;
                 if (txError) throw txError;
 
                 let inc = 0, exp = 0;
@@ -110,29 +189,59 @@ User input: "${userMsg}"
                 });
                 const bal = inc - exp;
 
-                setMessages(prev => [...prev, {
-                    role: 'assistant',
-                    text: `${parsed.reply || "Here's your summary!"}\n\n📊 Period: ${startDate} to ${endDate}\n💚 Total Income: $${inc.toFixed(2)}\n🔴 Total Expense: $${exp.toFixed(2)}\n💼 Net Balance: $${bal.toFixed(2)}`
-                }]);
-            } else if (intent === 'insert' || parsed.amount) {
-                const { amount, description, type, category_id, reply } = parsed;
+                let summary = `${parsed.reply || "Here's your summary!"}\n\n📊 ${t('dashboard.timeframe')}: ${startDate} to ${endDate}`;
+                if (category_name) summary += `\n🏷️ ${t('budgets.category')}: ${category_name}`;
+                summary += `\n💚 ${t('dashboard.income')}: $${inc.toFixed(2)}\n🔴 ${t('dashboard.expense')}: $${exp.toFixed(2)}\n💼 ${t('dashboard.totalBalance')}: $${bal.toFixed(2)}`;
+
+                setMessages(prev => [...prev, { role: 'assistant', text: summary }]);
+            } else if (intent === 'insert') {
+                const { amount, description, type, category_id, date, reply } = parsed;
 
                 if (!amount || !description || !type) {
                     throw new Error("AI could not extract enough transaction information.");
                 }
 
-                // Insert into Supabase
                 const { error } = await supabase.from('transactions').insert({
                     user_id: session?.user?.id,
                     amount: Number(amount),
                     description,
                     type,
                     category_id: category_id || null,
+                    transaction_date: date || today
                 });
 
                 if (error) throw error;
 
-                setMessages(prev => [...prev, { role: 'assistant', text: reply || `Got it! Successfully logged ${type} of $${amount} for "${description}". ✅` }]);
+                // Push Notification Logic
+                if (notificationsEnabled && type === 'expense' && category_id) {
+                    const budget = budgets.find(b => b.category_id === category_id);
+                    if (budget) {
+                        const currentSpent = spentContext[category_id] || 0;
+                        const newSpent = currentSpent + Number(amount);
+                        if (newSpent > budget.amount) {
+                            NotificationService.sendLocalNotification(
+                                t('budgets.over_budget'),
+                                `${t('budgets.category')}: ${budget.categories?.name}. ${t('budgets.amount')}: $${budget.amount}. ${t('common.total')}: $${newSpent.toFixed(2)}`
+                            );
+                        }
+                    }
+                }
+
+                setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+                // TTS
+                if (aiVoiceEnabled) {
+                    Speech.speak(reply, { language: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
+                }
+            } else if (intent === 'tips' || intent === 'ask_category') {
+                setMessages(prev => [...prev, { role: 'assistant', text: parsed.reply }]);
+                if (aiVoiceEnabled) {
+                    Speech.speak(parsed.reply, { language: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
+                }
+            } else if (intent === 'confirm_category') {
+                setMessages(prev => [...prev, { role: 'assistant', text: parsed.reply }]);
+                if (aiVoiceEnabled) {
+                    Speech.speak(parsed.reply, { language: i18n.language === 'vi' ? 'vi-VN' : 'en-US' });
+                }
             } else {
                 throw new Error("Could not understand the intent of your message.");
             }
@@ -164,9 +273,16 @@ User input: "${userMsg}"
             </ScrollView>
 
             <View className="p-4 bg-gray-800 border-t border-gray-700 flex-row items-center">
+                <TouchableOpacity
+                    onPress={isRecording ? stopRecording : startRecording}
+                    className={`w-12 h-12 rounded-full items-center justify-center mr-2 ${isRecording ? 'bg-red-500' : 'bg-gray-700'}`}
+                >
+                    <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="white" />
+                </TouchableOpacity>
+
                 <TextInput
                     className="flex-1 bg-gray-900 text-white rounded-full px-4 py-3 border border-gray-700 mr-2"
-                    placeholder="Type a message..."
+                    placeholder={t('chatbot.placeholder')}
                     placeholderTextColor="#9ca3af"
                     value={input}
                     onChangeText={setInput}
@@ -177,9 +293,76 @@ User input: "${userMsg}"
                     disabled={loading || !input.trim()}
                     className={`bg-blue-600 w-12 h-12 rounded-full items-center justify-center ${(!input.trim() || loading) && 'opacity-50'}`}
                 >
-                    <Text className="text-white font-bold">↑</Text>
+                    <Ionicons name="send" size={20} color="white" />
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
     );
+
+    async function startRecording() {
+        try {
+            const permission = await Audio.requestPermissionsAsync();
+            if (permission.status === "granted") {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                });
+                const { recording } = await Audio.Recording.createAsync(
+                    Audio.RecordingOptionsPresets.HIGH_QUALITY
+                );
+                setRecording(recording);
+                setIsRecording(true);
+            } else {
+                Alert.alert("Permission denied", "Please allow microphone access to use voice chat.");
+            }
+        } catch (err) {
+            console.error("Failed to start recording", err);
+        }
+    }
+
+    async function stopRecording() {
+        setIsRecording(false);
+        if (!recording) return;
+        try {
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            setRecording(null);
+
+            if (uri) {
+                setLoading(true);
+                try {
+                    const base64Audio = await FileSystem.readAsStringAsync(uri, {
+                        encoding: 'base64',
+                    });
+
+                    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+                    if (!apiKey) throw new Error("API Key missing");
+                    const genAI = new GoogleGenerativeAI(apiKey);
+                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                    const result = await model.generateContent([
+                        "Transcribe this audio message exactly. Respond with ONLY the transcription and nothing else.",
+                        {
+                            inlineData: {
+                                data: base64Audio,
+                                mimeType: "audio/m4a" // Expo recordings are usually m4a/aac
+                            }
+                        }
+                    ]);
+
+                    const transcription = result.response.text().trim();
+                    if (transcription) {
+                        setInput(transcription);
+                    }
+                } catch (err: any) {
+                    console.error("Transcription error", err);
+                    Alert.alert("Transcription Error", "Could not transcribe your voice. Please try typing.");
+                } finally {
+                    setLoading(false);
+                }
+            }
+        } catch (err) {
+            console.error("Failed to stop recording", err);
+        }
+    }
 }

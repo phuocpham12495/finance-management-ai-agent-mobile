@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Link, useRouter } from 'expo-router';
 import { supabase } from '@/src/services/supabase';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SignupScreen() {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -12,11 +14,11 @@ export default function SignupScreen() {
 
     const handleSignup = async () => {
         if (!email || !password || !confirmPassword) {
-            Alert.alert('Error', 'Please fill all fields');
+            Alert.alert(t('common.error'), t('auth.fillAllFields'));
             return;
         }
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            Alert.alert(t('common.error'), t('auth.passwordsNotMatch'));
             return;
         }
 
@@ -27,9 +29,9 @@ export default function SignupScreen() {
         });
 
         if (error) {
-            Alert.alert('Signup Failed', error.message);
+            Alert.alert(t('auth.signupFailed'), error.message);
         } else {
-            Alert.alert('Success', 'Account created successfully! Please check your email for verification.');
+            Alert.alert(t('common.success'), t('auth.signupSuccess'));
             router.replace('/(auth)/login');
         }
         setLoading(false);
@@ -38,14 +40,14 @@ export default function SignupScreen() {
     return (
         <View className="flex-1 justify-center bg-gray-900 p-6">
             <View className="items-center mb-10">
-                <Text className="text-3xl font-bold text-white">Create Account</Text>
-                <Text className="text-gray-400 mt-2">Join us to manage your finance</Text>
+                <Text className="text-3xl font-bold text-white">{t('auth.createAccount')}</Text>
+                <Text className="text-gray-400 mt-2">{t('auth.signupSubtitle')}</Text>
             </View>
 
             <View className="space-y-4">
                 <TextInput
                     className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700"
-                    placeholder="Email address"
+                    placeholder={t('auth.emailPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     autoCapitalize="none"
                     keyboardType="email-address"
@@ -54,7 +56,7 @@ export default function SignupScreen() {
                 />
                 <TextInput
                     className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700 mt-4"
-                    placeholder="Password"
+                    placeholder={t('auth.passwordPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={password}
@@ -62,7 +64,7 @@ export default function SignupScreen() {
                 />
                 <TextInput
                     className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700 mt-4"
-                    placeholder="Confirm Password"
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={confirmPassword}
@@ -77,16 +79,16 @@ export default function SignupScreen() {
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text className="text-white font-semibold text-lg">Sign Up</Text>
+                        <Text className="text-white font-semibold text-lg">{t('auth.signUp')}</Text>
                     )}
                 </TouchableOpacity>
             </View>
 
             <View className="flex-row justify-center mt-8">
-                <Text className="text-gray-400">Already have an account? </Text>
+                <Text className="text-gray-400">{t('auth.haveAccount')} </Text>
                 <Link href="/(auth)/login" asChild>
                     <TouchableOpacity>
-                        <Text className="text-blue-500 font-semibold">Sign In</Text>
+                        <Text className="text-blue-500 font-semibold">{t('auth.signIn')}</Text>
                     </TouchableOpacity>
                 </Link>
             </View>

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Link, useRouter } from 'expo-router';
 import { supabase } from '@/src/services/supabase';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function LoginScreen() {
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -11,7 +13,7 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter email and password');
+            Alert.alert(t('common.error'), t('auth.errorEnterDetails'));
             return;
         }
         setLoading(true);
@@ -21,7 +23,7 @@ export default function LoginScreen() {
         });
 
         if (error) {
-            Alert.alert('Login Failed', error.message);
+            Alert.alert(t('auth.loginFailed'), error.message);
         } else {
             router.replace('/(tabs)');
         }
@@ -32,13 +34,13 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center bg-gray-900 p-6">
             <View className="items-center mb-10">
                 <Text className="text-4xl font-bold text-white tracking-widest">FinanceAI</Text>
-                <Text className="text-gray-400 mt-2 text-lg">Manage your money smarter</Text>
+                <Text className="text-gray-400 mt-2 text-lg">{t('auth.subtitle')}</Text>
             </View>
 
             <View className="space-y-4">
                 <TextInput
                     className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700 focus:border-blue-500"
-                    placeholder="Email address"
+                    placeholder={t('auth.emailPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     autoCapitalize="none"
                     keyboardType="email-address"
@@ -47,7 +49,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                     className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700 focus:border-blue-500 mt-4"
-                    placeholder="Password"
+                    placeholder={t('auth.passwordPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={password}
@@ -62,16 +64,16 @@ export default function LoginScreen() {
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text className="text-white font-semibold text-lg">Sign In</Text>
+                        <Text className="text-white font-semibold text-lg">{t('auth.signIn')}</Text>
                     )}
                 </TouchableOpacity>
             </View>
 
             <View className="flex-row justify-center mt-8">
-                <Text className="text-gray-400">Don't have an account? </Text>
+                <Text className="text-gray-400">{t('auth.noAccount')} </Text>
                 <Link href="/(auth)/signup" asChild>
                     <TouchableOpacity>
-                        <Text className="text-blue-500 font-semibold">Sign Up</Text>
+                        <Text className="text-blue-500 font-semibold">{t('auth.signUp')}</Text>
                     </TouchableOpacity>
                 </Link>
             </View>
