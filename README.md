@@ -9,21 +9,25 @@ Built with Expo, NativeWind, Supabase, and the Google Gemini API, this applicati
 ## 🌟 Key Features
 
 ### 🤖 Intelligent AI Chatbot (Gemini)
-*   **Auto-Logging**: Chat with the AI! Instead of manually tapping out form fields, simply tell the app *"I spent $15 on a burger for lunch"* or *"I just got my $2000 salary!"* and the AI will extract the amount, description, and automatically match it to the correct custom category before saving it to your database.
-*   **Dynamic NLP Summaries**: Ask the AI questions like *"How much did I spend last month?"* or *"Give me my balance from January 1st to January 15th."* The AI will intelligently query your actual database records and furnish a conversational, friendly response packed with emojis.
+*   **Auto-Logging**: Chat with the AI! Tell the app *"I spent $15 on a burger for lunch"* and the AI extracts the amount and category automatically.
+*   **🎙️ Refined Voice Chat**: Tap the microphone icon to record. The AI transcribes your speech into the input field so you can **review or edit it** before sending!
+*   **🔊 AI Voice Toggle**: Choose whether the AI speaks back to you via the **"AI Voice Response"** setting in your Profile.
+*   **Dynamic NLP Summaries**: Ask questions like *"How much did I spend last month?"* and get conversational responses with real-time data.
+
+### 📅 Smart Budgeting & Alerts
+*   **Budget Tab**: Set monthly limits for specific categories and track your spending with visual progress bars.
+*   **🔔 Push Notifications**: Receive immediate push alerts if an expense (logged via AI or manually) exceeds your budget threshold.
+*   **AI Budget Guard**: The AI agent is context-aware and will always warn you in chat if you've crossed your budget limit.
 
 ### 📊 Beautiful Analytics Dashboard
-*   **Real-time Breakdown**: Visualize your expense habits with vibrant, animated pie charts.
-*   **Filters**: Slice your financial data by "All", "Daily", "Monthly", "Yearly", or use a precision interactive "Custom" dual date picker.
-*   **Summary Cards**: Instant visibility into your Total Balance, Total Income, and Total Expenses.
+*   **Real-time Breakdown**: Visualize your expense habits with vibrant pie charts.
+*   **Filters**: Slice your financial data by "All", "Daily", "Monthly", "Yearly", or use a precision interactive "Custom" date picker.
+*   **Summary Cards**: Instant visibility into Total Balance, Income, and Expenses.
 
-### 💼 Smart Transaction & Category Management
-*   **Full CRUD Support**: Add, Edit, or Delete any transaction in seconds.
-*   **Custom Categories**: Create, rename, edit and delete your own individualized income and expense categories (with built-in duplicate name prevention!).
-
-### 👤 Profile Customization
-*   **Personalization**: Adjust your display name, Date of Birth (using an intuitive DateTime picker), and toggle notification settings.
-*   **Avatars**: Directly upload profile pictures from your local device's photo library via `expo-image-picker`.
+### 👤 Profile & Localization
+*   **Multi-language Support**: Seamlessly switch between **English** and **Vietnamese** across the entire app and AI chat.
+*   **Avatars**: Upload profile pictures from your local device via `expo-image-picker`.
+*   **Personalization**: Adjust display name, Date of Birth, and Toggle Preferences (Notifications, AI Voice).
 
 ---
 
@@ -49,7 +53,7 @@ npm install
 ```
 
 ### 4. Environment Variables
-Create a root level file named `.env` based off `.env.example` and populate it with your specific API keys:
+Create a root level file named `.env` and populate it with your specific API keys:
 
 ```bash
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
@@ -68,8 +72,10 @@ Use the **Expo Go** app on your physical iOS/Android device to scan the generate
 
 ## 🛠️ Technology Stack
 *   **Frontend**: React Native, Expo, Expo Router
-*   **Styling**: NativeWind (Tailwind CSS for React Native)
+*   **Styling**: NativeWind (Tailwind CSS)
 *   **Backend & Auth**: Supabase
-*   **Artificial Intelligence**: Google Generative AI SDK (`gemini-2.5-flash`)
+*   **AI Engine**: Google Gemini API (`gemini-1.5-flash`)
+*   **Audio & Voice**: `expo-speech`, `expo-av`, `expo-file-system`
+*   **Notifications**: `expo-notifications`
 *   **Charts**: `react-native-chart-kit`
-*   **UI Components**: `expo-image-picker`, `@react-native-community/datetimepicker`
+*   **Localization**: `i18next`, `react-i18next`
